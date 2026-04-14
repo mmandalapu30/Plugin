@@ -1,0 +1,20 @@
+{
+  "name": "automotive-compliance-checker",
+  "version": "1.0.0",
+  "description": "Figma plugin UI framework for automotive design compliance validation",
+  "scripts": {
+    "build": "webpack --mode production",
+    "build:dev": "webpack --mode development",
+    "watch": "webpack --mode development --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.95.1",
+    "css-loader": "^6.10.0",
+    "html-webpack-plugin": "^5.6.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.4.5",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4"
+  }
+}
