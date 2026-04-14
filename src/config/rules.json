@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "note": "Placeholder configuration — replace values with real ISO/Android-Auto datasets",
+  "p0": {
+    "iconNameKeyword": "icon",
+    "maxChildNodes": 10,
+    "allowedFillTypes": ["SOLID", "GRADIENT_LINEAR", "GRADIENT_RADIAL"]
+  },
+  "p1": {
+    "minTouchSizePx": 48,
+    "minFontSizePt": 12
+  },
+  "p2": {
+    "maxNodeDepth": 5
+  },
+  "p3": {
+    "consistencyKeywords": ["icon", "btn", "label", "card", "header", "footer"]
+  }
+}

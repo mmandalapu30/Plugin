@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Automotive Compliance Checker</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f172a;
+      --surface:     #1e293b;
+      --surface-2:   #263348;
+      --border:      #334155;
+      --text:        #e2e8f0;
+      --text-muted:  #94a3b8;
+      --accent:      #3b82f6;
+
+      --p0-color:    #ef4444;
+      --p0-bg:       rgba(239,68,68,.12);
+      --p1-color:    #f97316;
+      --p1-bg:       rgba(249,115,22,.12);
+      --p2-color:    #eab308;
+      --p2-bg:       rgba(234,179,8,.10);
+      --p3-color:    #22c55e;
+      --p3-bg:       rgba(34,197,94,.10);
+
+      --score-red:   #ef4444;
+      --score-yellow:#eab308;
+      --score-green: #22c55e;
+
+      --radius:      10px;
+      --radius-sm:   6px;
+      --shadow:      0 4px 16px rgba(0,0,0,.4);
+      --font:        -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* ── Scrollbar ────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Layout ───────────────────────────────────────────────────────── */
+    .plugin-root {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .content-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 12px 16px;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────────── */
+    .plugin-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-title .logo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+    }
+
+    .header-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+
+    #last-updated {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ── Buttons ──────────────────────────────────────────────────────── */
+    .btn-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+
+    .btn:hover { background: #304060; border-color: var(--accent); }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #2563eb; }
+
+    /* ── Score Card ───────────────────────────────────────────────────── */
+    .score-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px 16px 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border: 1px solid var(--border);
+      transition: border-color .3s;
+    }
+
+    .score-card.score-red   { border-color: var(--p0-color); }
+    .score-card.score-yellow{ border-color: var(--p2-color); }
+    .score-card.score-green { border-color: var(--p3-color); }
+
+    .score-ring-wrap {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+    }
+
+    .score-ring-wrap svg {
+      transform: rotate(-90deg);
+    }
+
+    .score-ring-bg   { stroke: var(--surface-2); }
+    .score-ring-fill {
+      stroke: var(--accent);
+      stroke-linecap: round;
+      transition: stroke-dashoffset .6s ease, stroke .3s ease;
+    }
+
+    .score-card.score-red    .score-ring-fill { stroke: var(--score-red); }
+    .score-card.score-yellow .score-ring-fill { stroke: var(--score-yellow); }
+    .score-card.score-green  .score-ring-fill { stroke: var(--score-green); }
+
+    .score-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #score-number {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+
+    .score-card.score-red    #score-number { color: var(--score-red); }
+    .score-card.score-yellow #score-number { color: var(--score-yellow); }
+    .score-card.score-green  #score-number { color: var(--score-green); }
+
+    .score-ring-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .score-meta { flex: 1; }
+
+    .score-meta h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    #score-label {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .score-card.score-red    #score-label { color: var(--score-red); }
+    .score-card.score-yellow #score-label { color: var(--score-yellow); }
+    .score-card.score-green  #score-label { color: var(--score-green); }
+
+    .score-breakdown {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+
+    .breakdown-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 4px 6px;
+      font-size: 11px;
+    }
+
+    .chip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .chip-dot.p0 { background: var(--p0-color); }
+    .chip-dot.p1 { background: var(--p1-color); }
+    .chip-dot.p2 { background: var(--p2-color); }
+    .chip-dot.p3 { background: var(--p3-color); }
+
+    .chip-count {
+      font-weight: 700;
+      margin-left: auto;
+    }
+
+    /* ── Section Cards (accordion) ────────────────────────────────────── */
+    .section-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      user-select: none;
+      background: var(--surface);
+      border-bottom: 1px solid transparent;
+      transition: background .15s;
+    }
+
+    .section-header:hover { background: var(--surface-2); }
+
+    .section-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      flex: 1;
+    }
+
+    .section-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+      color: #fff;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .section-chevron {
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: transform .2s;
+    }
+
+    .section-toggle.open .section-chevron { transform: rotate(180deg); }
+
+    .section-body {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .section-body.collapsed { display: none; }
+
+    /* ── Severity colours ─────────────────────────────────────────────── */
+    .sev-p0 .section-title { color: var(--p0-color); }
+    .sev-p0 .section-badge { background: var(--p0-color); }
+    .sev-p0 .section-header { border-bottom-color: var(--p0-bg); }
+
+    .sev-p1 .section-title { color: var(--p1-color); }
+    .sev-p1 .section-badge { background: var(--p1-color); }
+
+    .sev-p2 .section-title { color: var(--p2-color); }
+    .sev-p2 .section-badge { background: var(--p2-color); }
+
+    .sev-p3 .section-title { color: var(--p3-color); }
+    .sev-p3 .section-badge { background: var(--p3-color); }
+
+    /* ── Issue cards ──────────────────────────────────────────────────── */
+    .issue-card {
+      border-radius: var(--radius-sm);
+      padding: 9px 10px;
+      border-left: 3px solid transparent;
+    }
+
+    .issue-p0 { background: var(--p0-bg); border-left-color: var(--p0-color); }
+    .issue-p1 { background: var(--p1-bg); border-left-color: var(--p1-color); }
+    .issue-p2 { background: var(--p2-bg); border-left-color: var(--p2-color); }
+    .issue-p3 { background: var(--p3-bg); border-left-color: var(--p3-color); }
+
+    .issue-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .issue-badge {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      letter-spacing: .4px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .badge-p0 { background: var(--p0-color); }
+    .badge-p1 { background: var(--p1-color); }
+    .badge-p2 { background: var(--p2-color); }
+    .badge-p3 { background: var(--p3-color); }
+
+    .issue-title {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .issue-message {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      line-height: 1.45;
+    }
+
+    .issue-suggestion {
+      display: flex;
+      gap: 5px;
+      font-size: 11px;
+      background: rgba(255,255,255,.04);
+      border-radius: 4px;
+      padding: 4px 6px;
+      line-height: 1.4;
+    }
+
+    .suggestion-icon { flex-shrink: 0; }
+
+    /* ── Element Details panel ────────────────────────────────────────── */
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 10px;
+    }
+
+    .detail-item {
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 7px 8px;
+    }
+
+    .detail-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-bottom: 2px;
+    }
+
+    .detail-value {
+      font-size: 12px;
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    /* ── Empty / Loading states ───────────────────────────────────────── */
+    .state-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .state-icon { font-size: 36px; }
+
+    .state-placeholder h3 {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .state-placeholder p {
+      font-size: 12px;
+      max-width: 240px;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Empty issue state ────────────────────────────────────────────── */
+    .empty-state {
+      font-size: 11px;
+      color: var(--p3-color);
+      padding: 4px 6px;
+      opacity: .8;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-root">
+
+    <!-- ── Header ────────────────────────────────────────────────────── -->
+    <header class="plugin-header">
+      <div class="header-title">
+        <span class="logo-dot"></span>
+        Automotive Compliance Checker
+      </div>
+      <div class="header-sub">Real-time validation for automotive UI designs</div>
+      <div class="header-meta">
+        <span id="last-updated" class="text-muted">Not yet run</span>
+        <div class="btn-group">
+          <button id="btn-refresh" class="btn">⟳ Refresh</button>
+          <button id="btn-run" class="btn btn-primary">▶ Run Validation</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Scrollable content ─────────────────────────────────────────── -->
+    <div class="content-scroll">
+
+      <!-- Empty state -->
+      <div id="state-empty" class="state-placeholder">
+        <div class="state-icon">🎯</div>
+        <h3>No Element Selected</h3>
+        <p>Select any element in your Figma canvas to run the compliance check.</p>
+      </div>
+
+      <!-- Loading state -->
+      <div id="state-loading" class="state-placeholder" style="display:none">
+        <div class="spinner"></div>
+        <h3>Running Validation…</h3>
+        <p>Analysing the selected element against automotive design rules.</p>
+      </div>
+
+      <!-- Results -->
+      <div id="state-results" style="display:none">
+
+        <!-- Score Card -->
+        <div id="score-card" class="score-card">
+          <div class="score-ring-wrap">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle class="score-ring-bg" cx="60" cy="60" r="54"
+                fill="none" stroke-width="10"/>
+              <circle id="score-ring-fill" class="score-ring-fill" cx="60" cy="60" r="54"
+                fill="none" stroke-width="10"
+                stroke-dasharray="339.29" stroke-dashoffset="339.29"/>
+            </svg>
+            <div class="score-center">
+              <span id="score-number">—</span>
+              <span class="score-ring-label">Score</span>
+            </div>
+          </div>
+
+          <div class="score-meta">
+            <h3>Compliance Score</h3>
+            <div id="score-label">—</div>
+            <div class="score-breakdown">
+              <div class="breakdown-chip">
+                <span class="chip-dot p0"></span>Critical
+                <span id="count-p0" class="chip-count">0</span>
+              </div>
+              <div class="breakdown-chip">
+                <span class="chip-dot p1"></span>High
+                <span id="count-p1" class="chip-count">0</span>
+              </div>
+              <div class="breakdown-chip">
+                <span class="chip-dot p2"></span>Medium
+                <span id="count-p2" class="chip-count">0</span>
+              </div>
+              <div class="breakdown-chip">
+                <span class="chip-dot p3"></span>Low
+                <span id="count-p3" class="chip-count">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- P0 Issues -->
+        <div class="section-card sev-p0">
+          <button class="section-header section-toggle open" data-target="issues-p0">
+            <span class="section-icon">🔴</span>
+            <span class="section-title">P0 — Critical Issues</span>
+            <span class="section-badge">
+              <span id="badge-count-p0">0</span>
+            </span>
+            <span class="section-chevron">▼</span>
+          </button>
+          <div id="issues-p0" class="section-body"></div>
+        </div>
+
+        <!-- P1 Issues -->
+        <div class="section-card sev-p1">
+          <button class="section-header section-toggle open" data-target="issues-p1">
+            <span class="section-icon">🟠</span>
+            <span class="section-title">P1 — High Priority</span>
+            <span class="section-badge">
+              <span id="badge-count-p1">0</span>
+            </span>
+            <span class="section-chevron">▼</span>
+          </button>
+          <div id="issues-p1" class="section-body"></div>
+        </div>
+
+        <!-- P2 Issues -->
+        <div class="section-card sev-p2">
+          <button class="section-header section-toggle open" data-target="issues-p2">
+            <span class="section-icon">🟡</span>
+            <span class="section-title">P2 — Medium Priority</span>
+            <span class="section-badge">
+              <span id="badge-count-p2">0</span>
+            </span>
+            <span class="section-chevron">▼</span>
+          </button>
+          <div id="issues-p2" class="section-body"></div>
+        </div>
+
+        <!-- P3 Issues -->
+        <div class="section-card sev-p3">
+          <button class="section-header section-toggle open" data-target="issues-p3">
+            <span class="section-icon">🟢</span>
+            <span class="section-title">P3 — Low / Info</span>
+            <span class="section-badge">
+              <span id="badge-count-p3">0</span>
+            </span>
+            <span class="section-chevron">▼</span>
+          </button>
+          <div id="issues-p3" class="section-body"></div>
+        </div>
+
+        <!-- Element Details -->
+        <div class="section-card">
+          <button class="section-header section-toggle open" data-target="details-body">
+            <span class="section-icon">🔍</span>
+            <span class="section-title" style="color:var(--text)">Element Details</span>
+            <span class="section-chevron">▼</span>
+          </button>
+          <div id="details-body" class="details-grid">
+            <div class="detail-item">
+              <div class="detail-label">Name</div>
+              <div id="detail-name" class="detail-value">—</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Type</div>
+              <div id="detail-type" class="detail-value">—</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Size</div>
+              <div id="detail-size" class="detail-value">—</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Fill Type</div>
+              <div id="detail-fill" class="detail-value">—</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Depth</div>
+              <div id="detail-depth" class="detail-value">—</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Children</div>
+              <div id="detail-children" class="detail-value">—</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /state-results -->
+    </div><!-- /content-scroll -->
+  </div><!-- /plugin-root -->
+</body>
+</html>
