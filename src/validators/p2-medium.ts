@@ -47,19 +47,19 @@ export function validateInteraction(node: NodeSnapshot): ValidationIssue[] {
 
 // ─── P2-3: Animation stub ─────────────────────────────────────────────────
 export function validateAnimation(node: NodeSnapshot): ValidationIssue[] {
-  const issues: ValidationIssue[] = [];
-
-  // STUB: always warn — real check would inspect prototype transitions
-  issues.push({
-    id: "P2_ANIMATION",
-    severity: "P2",
-    title: "Animation Rules Not Verified",
-    message: `Animation constraints for node "${node.name}" could not be automatically verified.`,
-    suggestion:
-      "Ensure transitions are ≤300ms and use ease-in-out curves per automotive HMI guidelines.",
-  });
-
-  return issues;
+  // STUB (intentional): always warn because Figma's API does not expose
+  // prototype transition details at the SceneNode level. Replace this body
+  // with real easing/duration checks once the animation data is accessible.
+  return [
+    {
+      id: "P2_ANIMATION",
+      severity: "P2",
+      title: "Animation Rules Not Verified",
+      message: `Animation constraints for node "${node.name}" could not be automatically verified.`,
+      suggestion:
+        "Ensure transitions are ≤300ms and use ease-in-out curves per automotive HMI guidelines.",
+    },
+  ];
 }
 
 // ─── Aggregate P2 runner ──────────────────────────────────────────────────
